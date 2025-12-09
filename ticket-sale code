@@ -1,0 +1,147 @@
+from django.db import models
+
+
+class Stadium(models.Model):
+    id = models.AutoField(primary_key=True, db_column='StadiumID')
+    stadium_name = models.CharField(max_length=100, db_column='StadiumName')
+    city = models.CharField(max_length=100, db_column='City')
+    capacity = models.IntegerField(db_column='Capacity')
+    address = models.CharField(max_length=200, db_column='Address')
+    opening_date = models.DateField(db_column='OpeningDate')
+
+    class Meta:
+        db_table = 'Stadium'
+        managed = False
+        verbose_name = "Stadion"
+        verbose_name_plural = "Stadiondar"
+
+    def __str__(self):
+        return f"{self.stadium_name} ({self.city})"
+
+
+class Seat(models.Model):
+    id = models.AutoField(db_column='IdSeat', primary_key=True)
+    sector = models.CharField(db_column='Sector', max_length=10)
+    row_number = models.IntegerField(db_column='RowNumber')
+    seat_number = models.IntegerField(db_column='SeatNumber')
+    is_vip = models.BooleanField(db_column='IsVIP')
+
+    class Meta:
+        db_table = 'Seat'
+        managed = False
+        verbose_name = "Oryn"
+        verbose_name_plural = "Oryndar"
+
+    def __str__(self):
+        return f"Sektor {self.sector}, Qatar {self.row_number}, Oryn {self.seat_number}"
+
+
+class Ticket(models.Model):
+    ticket_id = models.AutoField(primary_key=True, db_column='IdTicket')
+    match_name = models.CharField(max_length=100, db_column='MatchName')
+    match_date = models.DateTimeField(db_column='MatchDate')
+    price = models.DecimalField(max_digits=10, decimal_places=2, db_column='Price')
+    status = models.CharField(max_length=20, db_column='Status')
+    seat = models.ForeignKey(Seat, on_delete=models.SET_NULL, null=True, blank=True, db_column='IdSeat')
+    stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, db_column='StadiumID')
+
+    class Meta:
+        db_table = 'Ticket'
+        managed = False
+        verbose_name = "Bilet"
+        verbose_name_plural = "Biletter"
+
+    def __str__(self):
+        return f"{self.match_name} — {self.match_date.date()}"
+
+
+class Sale(models.Model):
+    id = models.AutoField(primary_key=True, db_column='IdSale')
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, db_column='IdTicket')
+    buyer_name = models.CharField(max_length=100, db_column='BuyerName')
+    sale_date = models.DateTimeField(db_column='SaleDate')
+    payment_method = models.CharField(max_length=20, db_column='PaymentMethod')
+
+    class Meta:
+        db_table = 'Sale'
+        managed = False
+        verbose_name = "Satý"
+        verbose_name_plural = "Satular"
+
+    def __str__(self):
+        return f"{self.buyer_name} — {self.payment_method} — {self.sale_date.date()}"
+
+#from django.contrib import admin
+from .models import Ticket, Seat, Stadium, Sale
+
+
+@admin.register(Stadium)
+class StadiumAdmin(admin.ModelAdmin):
+    list_display = ('stadium_name', 'city', 'capacity', 'opening_date')
+    list_filter = ('city',)
+    search_fields = ('stadium_name',)
+    actions = ['delete_selected']
+
+    def has_delete_permission(self, request, obj=None):
+        return True
+
+
+@admin.register(Seat)
+class SeatAdmin(admin.ModelAdmin):
+    list_display = ('id', 'sector', 'row_number', 'seat_number', 'is_vip')
+    list_filter = ('sector', 'is_vip')
+    search_fields = ('sector',)
+    actions = ['delete_selected']
+
+    def has_delete_permission(self, request, obj=None):
+        return True
+
+
+@admin.register(Ticket)
+class TicketAdmin(admin.ModelAdmin):
+    list_display = ('ticket_id', 'match_name', 'match_date', 'price', 'status', 'seat', 'stadium')
+    list_filter = ('status', 'match_date', 'stadium')
+    search_fields = ('match_name',)
+    actions = ['delete_selected']
+
+    def has_delete_permission(self, request, obj=None):
+        return True
+
+
+@admin.register(Sale)
+class SaleAdmin(admin.ModelAdmin):
+    list_display = ('id', 'ticket', 'buyer_name', 'sale_date', 'payment_method')
+    list_filter = ('payment_method', 'sale_date')
+    search_fields = ('buyer_name', 'ticket__match_name')
+    actions = ['delete_selected']
+
+    def has_delete_permission(self, request, obj=None):
+        return True
+
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.index, name='index'),
+    path('stadiums/', views.stadium_list, name='stadium_list'),
+    path('buy/<int:ticket_id>/', views.buy_ticket, name='buy_ticket'),
+    path('confirm/<int:ticket_id>/', views.confirm_purchase, name='confirm_purchase'),
+
+    path('pay/cash/<int:ticket_id>/', views.pay_cash, name='pay_cash'),
+    path('pay/card/<int:ticket_id>/', views.pay_card, name='pay_card'),
+    path('pay/crypto/<int:ticket_id>/', views.pay_crypto, name='pay_crypto'),
+]
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.index, name='index'),
+    path('stadiums/', views.stadium_list, name='stadium_list'),
+    path('buy/<int:ticket_id>/', views.buy_ticket, name='buy_ticket'),
+    path('confirm/<int:ticket_id>/', views.confirm_purchase, name='confirm_purchase'),
+
+    path('pay/cash/<int:ticket_id>/', views.pay_cash, name='pay_cash'),
+    path('pay/card/<int:ticket_id>/', views.pay_card, name='pay_card'),
+    path('pay/crypto/<int:ticket_id>/', views.pay_crypto, name='pay_crypto'),
+]
+
